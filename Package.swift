@@ -17,6 +17,10 @@ let package = Package(
       linkerSettings: [
         .linkedFramework("ServiceManagement")
       ]
+    ),
+    .testTarget(
+      name: "SpyGlassesTests",
+      dependencies: ["SpyGlasses"]
     )
   ]
 )

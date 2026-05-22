@@ -61,8 +61,10 @@ final class SpeedTestRunner: ObservableObject {
         phase = .idle
       } catch is CancellationError {
         phase = .idle
+      } catch let error as SpeedTestError {
+        phase = .failed(error.message)
       } catch {
-        phase = .failed("Failed")
+        phase = .failed(error.localizedDescription)
       }
     }
   }
@@ -272,4 +274,17 @@ private enum SpeedTestError: Error {
   case missingExecutable
   case missingResult
   case processFailed(String)
+
+  var message: String {
+    switch self {
+    case .missingExecutable:
+      "Install the Ookla speedtest CLI."
+    case .missingResult:
+      "Speedtest finished without a result."
+    case .processFailed(let message):
+      message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        ? "Speedtest failed."
+        : message.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+  }
 }

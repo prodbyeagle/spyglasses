@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MenuBarContentView: View {
   @State private var autoStart = LaunchAtLoginController.isEnabled
+  @State private var launchAtLoginError: String?
   @StateObject private var speedTest = SpeedTestRunner()
   @AppStorage(UpdateIntervalSettings.key) private var updateInterval = UpdateIntervalSettings.defaultValue
 
@@ -67,10 +68,19 @@ struct MenuBarContentView: View {
 
             do {
               try LaunchAtLoginController.setEnabled(enabled)
+              launchAtLoginError = nil
             } catch {
               autoStart = LaunchAtLoginController.isEnabled
+              launchAtLoginError = "Launch at login failed: \(error.localizedDescription)"
             }
           }
+      }
+
+      if let launchAtLoginError {
+        Text(launchAtLoginError)
+          .font(.caption2)
+          .foregroundStyle(.red)
+          .fixedSize(horizontal: false, vertical: true)
       }
 
       VStack(alignment: .leading, spacing: 7) {
@@ -256,6 +266,6 @@ struct MenuBarContentView: View {
 
   private func performHapticFeedback() {
     let performer = NSHapticFeedbackManager.defaultPerformer
-      performer.perform(.levelChange, performanceTime: .now)
-    }
+    performer.perform(.levelChange, performanceTime: .now)
+  }
 }

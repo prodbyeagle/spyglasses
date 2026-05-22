@@ -34,27 +34,13 @@ The app can show live traffic without Speedtest. For manual ping/download/upload
 swift build
 ```
 
-## Run Locally
-
-```bash
-./script/build_and_run.sh
-```
-
-Useful modes:
-
-```bash
-./script/build_and_run.sh verify
-./script/build_and_run.sh logs
-./script/build_and_run.sh debug
-```
-
-## Install
+## Install And Run
 
 ```bash
 ./script/build_install.sh
 ```
 
-This builds `dist/SpyGlasses.app`, copies it to `/Applications/SpyGlasses.app`, and opens it.
+This builds `dist/SpyGlasses.app`, signs it ad-hoc, copies it to `/Applications/SpyGlasses.app`, and opens it.
 
 ## Project Structure
 
@@ -65,12 +51,12 @@ Sources/SpyGlasses/
   Services/   Network monitor and Speedtest runner
   Support/    Formatting, settings, and launch-at-login helpers
   Views/      SwiftUI popover UI
-script/       Build, run, and install scripts
+script/       Build, install, and run script
 ```
 
 ## Notes
 
-SpyGlasses is currently unsigned and not notarized. macOS may show the usual warning for locally built apps.
+SpyGlasses is ad-hoc signed by the install script, but not notarized. macOS may show the usual warning for locally built apps.
 
 ## License
 

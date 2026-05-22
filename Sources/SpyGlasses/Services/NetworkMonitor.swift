@@ -108,9 +108,12 @@ private struct NetworkSample {
 
       let interface = currentPointer.pointee
       let flags = Int32(interface.ifa_flags)
+      let name = String(cString: interface.ifa_name)
 
       guard (flags & IFF_UP) != 0,
+        (flags & IFF_RUNNING) != 0,
         (flags & IFF_LOOPBACK) == 0,
+        name.hasPrefix("en"),
         let address = interface.ifa_addr,
         address.pointee.sa_family == UInt8(AF_LINK),
         let data = interface.ifa_data
