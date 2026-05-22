@@ -3,7 +3,7 @@ import Foundation
 enum UpdateIntervalSettings {
   static let key = "updateInterval"
   static let defaultValue: TimeInterval = 0.5
-  static let range: ClosedRange<Double> = 0.1...2
+  static let range: ClosedRange<Double> = 0.5...2
   static let step: Double = 0.1
 
   static var current: TimeInterval {

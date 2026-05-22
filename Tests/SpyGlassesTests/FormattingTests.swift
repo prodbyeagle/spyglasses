@@ -11,7 +11,7 @@ final class FormattingTests: XCTestCase {
   }
 
   func testUpdateIntervalNormalizationClampsToSupportedRange() {
-    XCTAssertEqual(UpdateIntervalSettings.normalized(0.01), 0.1)
+    XCTAssertEqual(UpdateIntervalSettings.normalized(0.01), 0.5)
     XCTAssertEqual(UpdateIntervalSettings.normalized(3), 2)
   }
 }

@@ -8,7 +8,7 @@ SpyGlasses sits in the menu bar and displays current download and upload speed. 
 
 - Live download and upload speed in the macOS menu bar
 - Compact SwiftUI popover
-- Adjustable update interval from `0.1s` to `2.0s`
+- Adjustable update interval from `0.5s` to `2.0s`
 - Launch at login support
 - Built-in Speedtest runner using the Ookla `speedtest` CLI
 - Native macOS app bundle generation script

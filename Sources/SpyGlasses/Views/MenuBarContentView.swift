@@ -92,8 +92,6 @@ struct MenuBarContentView: View {
 
   private var updateRangeLabels: some View {
     HStack {
-      Text("0.1s")
-      Spacer()
       Text("0.5s")
       Spacer()
       Text("1.0s")
