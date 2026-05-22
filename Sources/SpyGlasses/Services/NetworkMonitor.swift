@@ -18,8 +18,12 @@ final class NetworkMonitor: ObservableObject {
       object: nil,
       queue: .main
     ) { [weak self] _ in
+      guard let self else {
+        return
+      }
+
       Task { @MainActor in
-        self?.updateTimerIntervalIfNeeded()
+        self.updateTimerIntervalIfNeeded()
       }
     }
 
@@ -36,8 +40,12 @@ final class NetworkMonitor: ObservableObject {
   private func startTimer() {
     timer?.invalidate()
     timer = Timer(timeInterval: currentUpdateInterval, repeats: true) { [weak self] _ in
+      guard let self else {
+        return
+      }
+
       Task { @MainActor in
-        self?.refresh()
+        self.refresh()
       }
     }
 

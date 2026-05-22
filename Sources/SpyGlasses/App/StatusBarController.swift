@@ -35,8 +35,12 @@ final class StatusBarController: NSObject {
       object: nil,
       queue: .main
     ) { [weak self] _ in
+      guard let self else {
+        return
+      }
+
       Task { @MainActor in
-        self?.updateTimerIntervalIfNeeded()
+        self.updateTimerIntervalIfNeeded()
       }
     }
 
@@ -106,8 +110,12 @@ final class StatusBarController: NSObject {
   private func startTimer() {
     timer?.invalidate()
     timer = Timer(timeInterval: currentUpdateInterval, repeats: true) { [weak self] _ in
+      guard let self else {
+        return
+      }
+
       Task { @MainActor in
-        self?.updateStatus()
+        self.updateStatus()
       }
     }
 

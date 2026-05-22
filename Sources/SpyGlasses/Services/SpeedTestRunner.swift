@@ -45,8 +45,12 @@ final class SpeedTestRunner: ObservableObject {
 
       do {
         let result = try await Self.runOoklaSpeedTest { [weak self] event in
+          guard let self else {
+            return
+          }
+
           Task { @MainActor in
-            self?.apply(event)
+            self.apply(event)
           }
         }
 
