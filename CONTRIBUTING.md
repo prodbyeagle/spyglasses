@@ -12,7 +12,8 @@ swift build
 
 ```bash
 swift build
-./script/build_and_run.sh verify
+swift test
+./script/build_install.sh
 ```
 
 ## Pull Requests

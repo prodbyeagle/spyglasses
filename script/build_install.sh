@@ -17,7 +17,7 @@ APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 APPLICATIONS_APP="/Applications/$APP_NAME.app"
 
-ICON_SOURCE="$ROOT_DIR/light.icon/Assets/network.badge.shield.half.filled.svg"
+ICON_SOURCE="$ROOT_DIR/assets/app-icon.svg"
 ICON_VISIBLE_FRACTION="${ICON_VISIBLE_FRACTION:-0.82}"
 ICONSET="$DIST_DIR/AppIcon.iconset"
 ICON_SOURCE_PNG="$DIST_DIR/AppIconSource.png"

@@ -51,6 +51,7 @@ Sources/SpyGlasses/
   Services/   Network monitor and Speedtest runner
   Support/    Formatting, settings, and launch-at-login helpers
   Views/      SwiftUI popover UI
+assets/       App icon source
 script/       Build, install, and run script
 ```
 

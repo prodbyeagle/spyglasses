@@ -7,13 +7,8 @@ enum UpdateIntervalSettings {
   static let step: Double = 0.1
 
   static var current: TimeInterval {
-    get {
-      let value = UserDefaults.standard.double(forKey: key)
-      return normalized(value == 0 ? defaultValue : value)
-    }
-    set {
-      UserDefaults.standard.set(normalized(newValue), forKey: key)
-    }
+    let value = UserDefaults.standard.double(forKey: key)
+    return normalized(value == 0 ? defaultValue : value)
   }
 
   static func normalized(_ value: Double) -> Double {

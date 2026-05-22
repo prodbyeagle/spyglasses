@@ -8,61 +8,21 @@ final class NetworkMonitor: ObservableObject {
   @Published private(set) var uploadBytesPerSecond: Double = 0
 
   private var lastSample = NetworkSample.current()
-  private var timer: Timer?
-  private var currentUpdateInterval = UpdateIntervalSettings.current
-  private var updateIntervalObserver: NSObjectProtocol?
+  private var refreshTask: Task<Void, Never>?
 
   init() {
-    updateIntervalObserver = NotificationCenter.default.addObserver(
-      forName: UserDefaults.didChangeNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] _ in
-      guard let self else {
-        return
-      }
+    refreshTask = Task { @MainActor [weak self] in
+      while !Task.isCancelled {
+        self?.refresh()
 
-      Task { @MainActor in
-        self.updateTimerIntervalIfNeeded()
+        let interval = UInt64(UpdateIntervalSettings.current * 1_000_000_000)
+        try? await Task.sleep(nanoseconds: interval)
       }
     }
-
-    startTimer()
   }
 
   deinit {
-    timer?.invalidate()
-    if let updateIntervalObserver {
-      NotificationCenter.default.removeObserver(updateIntervalObserver)
-    }
-  }
-
-  private func startTimer() {
-    timer?.invalidate()
-    timer = Timer(timeInterval: currentUpdateInterval, repeats: true) { [weak self] _ in
-      guard let self else {
-        return
-      }
-
-      Task { @MainActor in
-        self.refresh()
-      }
-    }
-
-    if let timer {
-      RunLoop.main.add(timer, forMode: .common)
-    }
-  }
-
-  private func updateTimerIntervalIfNeeded() {
-    let newInterval = UpdateIntervalSettings.current
-
-    guard abs(newInterval - currentUpdateInterval) > 0.001 else {
-      return
-    }
-
-    currentUpdateInterval = newInterval
-    startTimer()
+    refreshTask?.cancel()
   }
 
   private func refresh() {

@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 @MainActor
@@ -9,10 +10,8 @@ final class StatusBarController: NSObject {
   private let statusFont = NSFont.monospacedSystemFont(
     ofSize: NSFont.menuBarFont(ofSize: 0).pointSize, weight: .medium)
 
-  private var timer: Timer?
-  private var currentUpdateInterval = UpdateIntervalSettings.current
-  private var updateIntervalObserver: NSObjectProtocol?
   private var anchoredStatusItemLength: CGFloat?
+  private var cancellables = Set<AnyCancellable>()
 
   override init() {
     super.init()
@@ -30,29 +29,14 @@ final class StatusBarController: NSObject {
       rootView: MenuBarContentView()
     )
 
-    updateIntervalObserver = NotificationCenter.default.addObserver(
-      forName: UserDefaults.didChangeNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] _ in
-      guard let self else {
-        return
+    monitor.$downloadBytesPerSecond
+      .combineLatest(monitor.$uploadBytesPerSecond)
+      .sink { [weak self] _, _ in
+        self?.updateStatus()
       }
+      .store(in: &cancellables)
 
-      Task { @MainActor in
-        self.updateTimerIntervalIfNeeded()
-      }
-    }
-
-    startTimer()
     updateStatus()
-  }
-
-  deinit {
-    timer?.invalidate()
-    if let updateIntervalObserver {
-      NotificationCenter.default.removeObserver(updateIntervalObserver)
-    }
   }
 
   @objc private func togglePopover() {
@@ -105,34 +89,5 @@ final class StatusBarController: NSObject {
   private func unanchorStatusItem() {
     anchoredStatusItemLength = nil
     statusItem.length = NSStatusItem.variableLength
-  }
-
-  private func startTimer() {
-    timer?.invalidate()
-    timer = Timer(timeInterval: currentUpdateInterval, repeats: true) { [weak self] _ in
-      guard let self else {
-        return
-      }
-
-      Task { @MainActor in
-        self.updateStatus()
-      }
-    }
-
-    if let timer {
-      RunLoop.main.add(timer, forMode: .common)
-    }
-  }
-
-  private func updateTimerIntervalIfNeeded() {
-    let newInterval = UpdateIntervalSettings.current
-
-    guard abs(newInterval - currentUpdateInterval) > 0.001 else {
-      return
-    }
-
-    currentUpdateInterval = newInterval
-    startTimer()
-    updateStatus()
   }
 }
