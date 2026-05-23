@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuBarContentView: View {
   @StateObject private var speedTest = SpeedTestRunner()
   @AppStorage(UpdateIntervalSettings.key) private var updateInterval = UpdateIntervalSettings.defaultValue
+  @AppStorage(SpeedTestRunner.forceMissingCLIKey) private var forceMissingSpeedtestCLI = false
 
   var body: some View {
     VStack(spacing: 0) {
@@ -20,6 +21,10 @@ struct MenuBarContentView: View {
     .frame(width: 300)
     .onAppear {
       updateInterval = UpdateIntervalSettings.current
+      speedTest.setForceMissingCLI(forceMissingSpeedtestCLI)
+    }
+    .onChange(of: forceMissingSpeedtestCLI) { _, newValue in
+      speedTest.setForceMissingCLI(newValue)
     }
   }
 
@@ -50,7 +55,7 @@ struct MenuBarContentView: View {
 
   private var settings: some View {
     VStack(alignment: .leading, spacing: 14) {
-      LaunchAtLoginControl(style: .compact, onChange: performHapticFeedback)
+      LaunchAtLoginControl(style: .compact, onChange: { performHapticFeedback(.levelChange) })
 
       VStack(alignment: .leading, spacing: 7) {
         updateHeader
@@ -70,7 +75,18 @@ struct MenuBarContentView: View {
 
       Divider()
 
-      SpeedTestSection(speedTest: speedTest, onStart: performHapticFeedback)
+      SpeedTestSection(
+        speedTest: speedTest,
+        onStart: { performHapticFeedback(.generic) },
+        onValueUpdate: { performHapticFeedback(.levelChange) },
+        onFinish: { performHapticFeedback(.alignment) }
+      )
+
+      Toggle("Pretend CLI missing", isOn: $forceMissingSpeedtestCLI)
+        .toggleStyle(.checkbox)
+        .controlSize(.small)
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
   }
 
@@ -117,12 +133,14 @@ struct MenuBarContentView: View {
     }
 
     if UpdateIntervalSettings.stopIndex(for: oldValue) != UpdateIntervalSettings.stopIndex(for: newValue) {
-      performHapticFeedback()
+      performHapticFeedback(.levelChange)
     }
   }
 
-  private func performHapticFeedback() {
+  private func performHapticFeedback(
+    _ pattern: NSHapticFeedbackManager.FeedbackPattern = .levelChange
+  ) {
     let performer = NSHapticFeedbackManager.defaultPerformer
-    performer.perform(.levelChange, performanceTime: .now)
+    performer.perform(pattern, performanceTime: .now)
   }
 }

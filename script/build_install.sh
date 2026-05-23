@@ -5,6 +5,8 @@ APP_NAME="SpyGlasses"
 BUNDLE_ID="com.spyglasses.app"
 APP_VERSION="${APP_VERSION:-0.1.0}"
 APP_BUILD="${APP_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
+BUILD_CONFIGURATION="${BUILD_CONFIGURATION:-debug}"
+INSTALL_APP="${INSTALL_APP:-1}"
 MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,8 +40,8 @@ stop_running_app() {
 }
 
 build_binary() {
-  swift build
-  BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
+  swift build -c "$BUILD_CONFIGURATION"
+  BUILD_BINARY="$(swift build -c "$BUILD_CONFIGURATION" --show-bin-path)/$APP_NAME"
 }
 
 prepare_bundle() {
@@ -219,6 +221,10 @@ prepare_bundle
 render_icon
 write_info_plist
 sign_bundle
-install_bundle
+if [ "$INSTALL_APP" = "1" ]; then
+  install_bundle
 
-echo "$APPLICATIONS_APP"
+  echo "$APPLICATIONS_APP"
+else
+  echo "$APP_BUNDLE"
+fi

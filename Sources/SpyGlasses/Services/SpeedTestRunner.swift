@@ -2,6 +2,8 @@ import Foundation
 
 @MainActor
 final class SpeedTestRunner: ObservableObject {
+  static let forceMissingCLIKey = "ForceMissingSpeedtestCLI"
+
   enum Phase: Equatable {
     case idle
     case ping
@@ -10,6 +12,15 @@ final class SpeedTestRunner: ObservableObject {
     case failed(String)
   }
 
+  enum InstallationState: Equatable {
+    case checking
+    case installed
+    case notInstalled
+    case installing
+    case failed(String)
+  }
+
+  @Published private(set) var installationState: InstallationState = .checking
   @Published private(set) var phase: Phase = .idle
   @Published private(set) var pingMilliseconds: Double?
   @Published private(set) var downloadBytesPerSecond: Double?
@@ -17,13 +28,69 @@ final class SpeedTestRunner: ObservableObject {
   @Published private(set) var serverName: String?
 
   private var task: Task<Void, Never>?
+  private var installTask: Task<Void, Never>?
+  private var forceMissingCLI: Bool
 
   var isRunning: Bool {
     phase == .ping || phase == .download || phase == .upload
   }
 
+  init() {
+    forceMissingCLI = UserDefaults.standard.bool(forKey: Self.forceMissingCLIKey)
+    refreshInstallationState()
+  }
+
   deinit {
     task?.cancel()
+    installTask?.cancel()
+  }
+
+  func refreshInstallationState() {
+    installationState = effectiveSpeedtestInstalled ? .installed : .notInstalled
+  }
+
+  func setForceMissingCLI(_ isForced: Bool) {
+    guard forceMissingCLI != isForced else {
+      refreshInstallationState()
+      return
+    }
+
+    forceMissingCLI = isForced
+
+    if isForced {
+      task?.cancel()
+      phase = .idle
+      pingMilliseconds = nil
+      downloadBytesPerSecond = nil
+      uploadBytesPerSecond = nil
+      serverName = nil
+    }
+
+    refreshInstallationState()
+  }
+
+  func installSpeedtestCLI() {
+    guard installationState != .installing else {
+      return
+    }
+
+    installTask?.cancel()
+    installationState = .installing
+
+    installTask = Task { [weak self] in
+      guard let self else {
+        return
+      }
+
+      do {
+        try await Self.installSpeedtestWithHomebrew()
+        installationState = effectiveSpeedtestInstalled ? .installed : .notInstalled
+      } catch let error as SpeedTestError {
+        installationState = .failed(error.message)
+      } catch {
+        installationState = .failed(error.localizedDescription)
+      }
+    }
   }
 
   func start() {
@@ -31,6 +98,12 @@ final class SpeedTestRunner: ObservableObject {
       return
     }
 
+    guard effectiveSpeedtestInstalled else {
+      installationState = .notInstalled
+      return
+    }
+
+    installationState = .installed
     task?.cancel()
     phase = .ping
     pingMilliseconds = nil
@@ -106,6 +179,10 @@ final class SpeedTestRunner: ObservableObject {
     }
   }
 
+  private var effectiveSpeedtestInstalled: Bool {
+    !forceMissingCLI && Self.isSpeedtestInstalled
+  }
+
   nonisolated private static func runOoklaSpeedTest(
     onEvent: @escaping @Sendable (OoklaSpeedTestEvent) -> Void
   ) async throws -> OoklaSpeedTestResult {
@@ -120,7 +197,7 @@ final class SpeedTestRunner: ObservableObject {
       "--accept-gdpr",
       "--format=jsonl",
       "--progress=yes",
-      "--progress-update-interval=500",
+      "--progress-update-interval=750",
     ]
     process.standardOutput = outputPipe
     process.standardError = errorPipe
@@ -179,6 +256,66 @@ final class SpeedTestRunner: ObservableObject {
     }
 
     return URL(fileURLWithPath: path)
+  }
+
+  nonisolated private static var isSpeedtestInstalled: Bool {
+    (try? speedtestExecutableURL()) != nil
+  }
+
+  nonisolated private static func installSpeedtestWithHomebrew() async throws {
+    let brewURL = try homebrewExecutableURL()
+
+    try await runHomebrewCommand(["tap", "teamookla/speedtest"], brewURL: brewURL)
+    try await runHomebrewCommand(["install", "speedtest", "--force"], brewURL: brewURL)
+  }
+
+  nonisolated private static func homebrewExecutableURL() throws -> URL {
+    let paths = [
+      "/opt/homebrew/bin/brew",
+      "/usr/local/bin/brew",
+    ]
+
+    guard let path = paths.first(where: FileManager.default.isExecutableFile(atPath:)) else {
+      throw SpeedTestError.missingHomebrew
+    }
+
+    return URL(fileURLWithPath: path)
+  }
+
+  nonisolated private static func runHomebrewCommand(_ arguments: [String], brewURL: URL) async throws {
+    let process = Process()
+    let errorPipe = Pipe()
+
+    process.executableURL = brewURL
+    process.arguments = arguments
+    process.standardError = errorPipe
+    process.environment = [
+      "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    ]
+
+    try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        process.terminationHandler = { process in
+          let errorOutput = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
+          guard process.terminationStatus == 0 else {
+            let message = String(data: errorOutput, encoding: .utf8) ?? "Homebrew install failed"
+            continuation.resume(throwing: SpeedTestError.processFailed(message))
+            return
+          }
+
+          continuation.resume()
+        }
+
+        do {
+          try process.run()
+        } catch {
+          continuation.resume(throwing: error)
+        }
+      }
+    } onCancel: {
+      process.terminate()
+    }
   }
 }
 
@@ -272,6 +409,7 @@ private struct Server: Decodable, Sendable {
 
 private enum SpeedTestError: Error {
   case missingExecutable
+  case missingHomebrew
   case missingResult
   case processFailed(String)
 
@@ -279,6 +417,8 @@ private enum SpeedTestError: Error {
     switch self {
     case .missingExecutable:
       "Install the Ookla speedtest CLI."
+    case .missingHomebrew:
+      "Homebrew not installed."
     case .missingResult:
       "Speedtest finished without a result."
     case .processFailed(let message):
