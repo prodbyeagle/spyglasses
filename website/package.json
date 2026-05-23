@@ -4,7 +4,7 @@
 	"scripts": {
 		"dev": "next dev --turbopack",
 		"build": "next build",
-		"deploy": "npx wrangler pages deploy out --project-name spyglasses",
+		"deploy": "echo \"Cloudflare Pages deploys the out directory automatically\"",
 		"start": "next start",
 		"lint": "next lint"
 	},
