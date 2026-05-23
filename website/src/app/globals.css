@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-sans: var(--font-inter);
+	--color-background: oklch(0.97 0.012 85);
+	--color-border: oklch(0.88 0.02 85);
+	--color-ring: oklch(0.7 0.015 286.067);
+	--color-text: oklch(0.18 0.008 85);
+	--color-text-secondary: oklch(0.45 0.012 85);
+	--color-text-tertiary: oklch(0.5 0.012 85);
+	--color-accent: oklch(0.58 0.15 155);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-background: oklch(0.16 0.012 85);
+		--color-border: oklch(0.28 0.02 85);
+		--color-ring: oklch(0.55 0.015 286.067);
+		--color-text: oklch(0.95 0.008 85);
+		--color-text-secondary: oklch(0.72 0.012 85);
+		--color-text-tertiary: oklch(0.68 0.012 85);
+		--color-accent: oklch(0.72 0.16 155);
+	}
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	body {
+		@apply bg-background text-text;
+	}
+}
