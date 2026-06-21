@@ -15,6 +15,7 @@ let package = Package(
       name: "SpyGlasses",
       path: "Sources/SpyGlasses",
       linkerSettings: [
+        .linkedFramework("IOKit"),
         .linkedFramework("ServiceManagement")
       ]
     ),
