@@ -2,145 +2,140 @@ import AppKit
 import SwiftUI
 
 struct MenuBarContentView: View {
-  @StateObject private var speedTest = SpeedTestRunner()
-  @AppStorage(UpdateIntervalSettings.key) private var updateInterval = UpdateIntervalSettings.defaultValue
-  @AppStorage(SpeedTestRunner.forceMissingCLIKey) private var forceMissingSpeedtestCLI = false
+    @ObservedObject var systemStats: SystemStatsMonitor
+    @StateObject private var speedTest = SpeedTestRunner()
+    @AppStorage(UpdateIntervalSettings.key) private var updateInterval = UpdateIntervalSettings.defaultValue
 
-  var body: some View {
-    VStack(spacing: 0) {
-      header
+    var body: some View {
+        VStack(spacing: 0) {
+            header
 
-      Divider()
-        .padding(.top, 10)
-        .padding(.bottom, 12)
+            Divider()
+                .padding(.top, 10)
+                .padding(.bottom, 12)
 
-      settings
+            SystemStatsSection(stats: systemStats.stats)
+
+            Divider()
+                .padding(.vertical, 12)
+
+            settings
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(width: 360)
+        .onAppear {
+            updateInterval = UpdateIntervalSettings.current
+        }
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 12)
-    .frame(width: 300)
-    .onAppear {
-      updateInterval = UpdateIntervalSettings.current
-      speedTest.setForceMissingCLI(forceMissingSpeedtestCLI)
+
+    private var header: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "network")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 24, height: 24)
+
+            Text("SpyGlasses")
+                .font(.headline)
+
+            Spacer()
+
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Image(systemName: "power")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 24, height: 24)
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .help("Quit")
+        }
     }
-    .onChange(of: forceMissingSpeedtestCLI) { _, newValue in
-      speedTest.setForceMissingCLI(newValue)
+
+    private var settings: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LaunchAtLoginControl(style: .compact, onChange: { performHapticFeedback(.levelChange) })
+
+            VStack(alignment: .leading, spacing: 7) {
+                updateHeader
+
+                Slider(
+                    value: $updateInterval,
+                    in: UpdateIntervalSettings.range,
+                    step: UpdateIntervalSettings.step
+                )
+                .controlSize(.small)
+                .onChange(of: updateInterval) { oldValue, newValue in
+                    updateIntervalChanged(oldValue: oldValue, newValue: newValue)
+                }
+
+                updateRangeLabels
+            }
+
+            Divider()
+
+            SpeedTestSection(
+                speedTest: speedTest,
+                onStart: { performHapticFeedback(.generic) },
+                onValueUpdate: { performHapticFeedback(.levelChange) },
+                onFinish: { performHapticFeedback(.alignment) }
+            )
+        }
     }
-  }
 
-  private var header: some View {
-    HStack(spacing: 10) {
-      Image(systemName: "network")
-        .font(.system(size: 16, weight: .semibold))
-        .foregroundStyle(.secondary)
-        .frame(width: 24, height: 24)
+    private var updateHeader: some View {
+        HStack {
+            Text("Update")
+                .font(.callout)
 
-      Text("SpyGlasses")
-        .font(.headline)
+            Spacer()
 
-      Spacer()
-
-      Button {
-        NSApplication.shared.terminate(nil)
-      } label: {
-        Image(systemName: "power")
-          .font(.system(size: 13, weight: .semibold))
-          .frame(width: 24, height: 24)
-      }
-      .buttonStyle(.borderless)
-      .foregroundStyle(.secondary)
-      .help("Quit")
+            Text(updateIntervalText)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText(value: updateInterval))
+                .animation(.snappy(duration: 0.18), value: updateInterval)
+                .frame(width: 34, alignment: .trailing)
+        }
     }
-  }
 
-  private var settings: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      LaunchAtLoginControl(style: .compact, onChange: { performHapticFeedback(.levelChange) })
+    private var updateRangeLabels: some View {
+        HStack {
+            Text("0.5s")
+            Spacer()
+            Text("1.0s")
+            Spacer()
+            Text("1.5s")
+            Spacer()
+            Text("2.0s")
+        }
+        .font(.caption2.monospacedDigit())
+        .foregroundStyle(.tertiary)
+    }
 
-      VStack(alignment: .leading, spacing: 7) {
-        updateHeader
+    private var updateIntervalText: String {
+        updateInterval.formatted(.number.precision(.fractionLength(1))) + "s"
+    }
 
-        Slider(
-          value: $updateInterval,
-          in: UpdateIntervalSettings.range,
-          step: UpdateIntervalSettings.step
-        )
-        .controlSize(.small)
-        .onChange(of: updateInterval) { oldValue, newValue in
-          updateIntervalChanged(oldValue: oldValue, newValue: newValue)
+    private func updateIntervalChanged(oldValue: Double, newValue: Double) {
+        let normalizedValue = UpdateIntervalSettings.normalized(newValue)
+
+        if normalizedValue != newValue {
+            updateInterval = normalizedValue
+            return
         }
 
-        updateRangeLabels
-      }
-
-      Divider()
-
-      SpeedTestSection(
-        speedTest: speedTest,
-        onStart: { performHapticFeedback(.generic) },
-        onValueUpdate: { performHapticFeedback(.levelChange) },
-        onFinish: { performHapticFeedback(.alignment) }
-      )
-
-      Toggle("Pretend CLI missing", isOn: $forceMissingSpeedtestCLI)
-        .toggleStyle(.checkbox)
-        .controlSize(.small)
-        .font(.caption)
-        .foregroundStyle(.secondary)
-    }
-  }
-
-  private var updateHeader: some View {
-    HStack {
-      Text("Update")
-        .font(.callout)
-
-      Spacer()
-
-      Text(updateIntervalText)
-        .font(.caption.monospacedDigit())
-        .foregroundStyle(.secondary)
-        .contentTransition(.numericText(value: updateInterval))
-        .animation(.snappy(duration: 0.18), value: updateInterval)
-        .frame(width: 34, alignment: .trailing)
-    }
-  }
-
-  private var updateRangeLabels: some View {
-    HStack {
-      Text("0.5s")
-      Spacer()
-      Text("1.0s")
-      Spacer()
-      Text("1.5s")
-      Spacer()
-      Text("2.0s")
-    }
-    .font(.caption2.monospacedDigit())
-    .foregroundStyle(.tertiary)
-  }
-
-  private var updateIntervalText: String {
-    updateInterval.formatted(.number.precision(.fractionLength(1))) + "s"
-  }
-
-  private func updateIntervalChanged(oldValue: Double, newValue: Double) {
-    let normalizedValue = UpdateIntervalSettings.normalized(newValue)
-
-    if normalizedValue != newValue {
-      updateInterval = normalizedValue
-      return
+        if UpdateIntervalSettings.stopIndex(for: oldValue) != UpdateIntervalSettings.stopIndex(for: newValue) {
+            performHapticFeedback(.levelChange)
+        }
     }
 
-    if UpdateIntervalSettings.stopIndex(for: oldValue) != UpdateIntervalSettings.stopIndex(for: newValue) {
-      performHapticFeedback(.levelChange)
+    private func performHapticFeedback(
+        _ pattern: NSHapticFeedbackManager.FeedbackPattern = .levelChange
+    ) {
+        let performer = NSHapticFeedbackManager.defaultPerformer
+        performer.perform(pattern, performanceTime: .now)
     }
-  }
-
-  private func performHapticFeedback(
-    _ pattern: NSHapticFeedbackManager.FeedbackPattern = .levelChange
-  ) {
-    let performer = NSHapticFeedbackManager.defaultPerformer
-    performer.perform(pattern, performanceTime: .now)
-  }
 }
